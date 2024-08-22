@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>贪吃蛇游戏</title>
+    <style>
+      canvas {
+        display: block;
+        margin: 20px auto;
+        border: 1px solid #000;
+      }
+      .container {
+        font-family: "Arial", sans-serif;
+        font-size: 24px;
+        color: #333;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+        display: inline-block;
+        margin: 0 auto;
+        vertical-align: top;
+        height: 300px;
+        width: 400px;
+      }
+      .history {
+        font-family: "Arial", sans-serif;
+        font-size: 18px;
+        color: #333;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+        display: inline-block;
+        margin: 0 auto;
+        vertical-align: top;
+        width: 400px;
+        height: 300px;
+        overflow: auto;
+      }
+      .wrapper {
+        display: flex;
+        justify-content: space-between;
+      }
+      button {
+        width: 130px;
+        height: 30px;
+        border-radius: 20px;
+        transition: all 0.3s ease-in-out;
+      }
+      button:hover {
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        transform: translateY(-5px);
+      }
+      #timer {
+        text-align: center;
+        font-size: 24px;
+        margin: 10px 0;
+      }
+      #text {
+        color: rgb(23, 225, 158);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="timer">00:00</div>
+    <div class="wrapper">
+      <div class="container">
+        <h3>贪吃蛇2.0</h3>
+        <ul>
+          <li>加速：空格</li>
+          <li>控制：wasd/PgUp键</li>
+        </ul>
+        <button id="startButton">开始游戏</button>
+        <button id="restartButton">重新开始</button>
+      </div>
+      <div class="history" id="history"></div>
+    </div>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const box = 20;
+      let snake = [];
+      let food = {};
+      let d;
+      let originalSpeed = 250; // 原始速度
+      let currentSpeed = originalSpeed; // 当前速度
+      let game;
+      let startTime;
+      let history = [];
+      let foodEaten = 0;
+      let obstacleSnake = null;
+      let timerInterval;
+      let lastDirection = null;
+      let gameOver = false;
+      let isAccelerating = false; //加速
+
+      document
+        .getElementById("startButton")
+        .addEventListener("click", resetGame);
+      document
+        .getElementById("restartButton")
+        .addEventListener("click", restartGame);
+
+      document.addEventListener("keydown", direction);
+      document.addEventListener("keyup", direction);
+
+      function restartGame() {
+        resetGame();
+      }
+
+      function resetGame() {
+        snake = [];
+        snake[0] = { x: 10 * box, y: 10 * box };
+        food = {
+          x: Math.floor(Math.random() * 15 + 1) * box,
+          y: Math.floor(Math.random() * 15 + 1) * box,
+        };
+        d = undefined;
+        currentSpeed = originalSpeed;
+        startTime = new Date();
+        foodEaten = 0;
+        obstacleSnake = null;
+        lastDirection = null;
+        gameOver = false;
+        isAccelerating = false; // 初始化加速状态为false
+        clearInterval(game);
+        clearInterval(timerInterval);
+        game = setInterval(draw, currentSpeed);
+        updateTimer();
+        timerInterval = setInterval(updateTimer, 1000);
+        //禁用开始按钮
+        document.getElementById("startButton").disabled = true;
+        //隐藏光标
+        canvas.style.cursor = "none";
+        //重新开始
+        document.getElementById("restartButton").style.display = "inline";
+      }
+      function startGame() {
+        snake = [];
+        snake[0] = { x: 10 * box, y: 10 * box };
+        food = {
+          x: Math.floor(Math.random() * 15 + 1) * box,
+          y: Math.floor(Math.random() * 15 + 1) * box,
+        };
+        d = undefined;
+        currentSpeed = originalSpeed;
+        startTime = new Date();
+        foodEaten = 0;
+        obstacleSnake = null;
+        lastDirection = null;
+        gameOver = false;
+        isAccelerating = false; // 初始化加速状态为false
+        clearInterval(game);
+        clearInterval(timerInterval);
+        game = setInterval(draw, currentSpeed);
+        updateTimer();
+        timerInterval = setInterval(updateTimer, 1000);
+        //显示开始按钮
+        document.getElementById("startButton").disabled = false;
+        //隐藏光标
+        canvas.style.cursor = "none";
+        //重新开始
+        document.getElementById("restartButton").style.display = "inline";
+      }
+
+      function direction(event) {
+        if (event.type === "keydown") {
+          if ((event.keyCode == 37 || event.keyCode == 65) && d != "RIGHT") {
+            // 左箭头或a键
+            d = "LEFT";
+          } else if (
+            (event.keyCode == 38 || event.keyCode == 87) &&
+            d != "DOWN"
+          ) {
+            // 上箭头或w键
+            d = "UP";
+          } else if (
+            (event.keyCode == 39 || event.keyCode == 68) &&
+            d != "LEFT"
+          ) {
+            // 右箭头或d键
+            d = "RIGHT";
+          } else if (
+            (event.keyCode === 40 || event.keyCode === 83) &&
+            d != "UP"
+          ) {
+            // 下箭头或s键
+            d = "DOWN";
+          } else if (event.keyCode === 32) {
+            // 空格键按下
+            isAccelerating = true;
+            // if (!gameOver) {
+            //   currentSpeed = 50; // 加速到50
+            //   clearInterval(game);
+            //   game = setInterval(draw, currentSpeed);
+            // }
+          }
+        } else if (event.type === "keyup" && event.keyCode === 32) {
+          // 空格键松开
+          isAccelerating = false;
+          // if (!gameOver) {
+          //   currentSpeed = originalSpeed; // 恢复原速
+          //   clearInterval(game);
+          //   game = setInterval(draw, currentSpeed);
+          // }
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < snake.length; i++) {
+          ctx.fillStyle = i == 0 ? "rgba(140,166,122)" : "white";
+          ctx.fillRect(snake[i].x, snake[i].y, box, box);
+          ctx.strokeStyle = "black";
+          ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+        }
+        ctx.fillStyle = "rgba(255,132,172)";
+        ctx.fillRect(food.x, food.y, box, box);
+
+        if (obstacleSnake) {
+          for (let i = 0; i < obstacleSnake.length; i++) {
+            ctx.fillStyle = i == 0 ? "rgba(255,0,0)" : "white";
+            ctx.fillRect(obstacleSnake[i].x, obstacleSnake[i].y, box, box);
+            ctx.strokeStyle = "black";
+            ctx.strokeRect(obstacleSnake[i].x, obstacleSnake[i].y, box, box);
+          }
+        }
+
+        let snakeX = snake[0].x;
+        let snakeY = snake[0].y;
+
+        if (d == "LEFT") snakeX -= box;
+        if (d == "UP") snakeY -= box;
+        if (d == "RIGHT") snakeX += box;
+        if (d == "DOWN") snakeY += box;
+
+        if (snakeX == food.x && snakeY == food.y) {
+          foodEaten++;
+          if (foodEaten % 5 === 0) {
+            addObstacleSnake();
+          }
+          food = {
+            x: Math.floor(Math.random() * 15 + 1) * box,
+            y: Math.floor(Math.random() * 15 + 1) * box,
+          };
+          currentSpeed = originalSpeed; // 恢复原速
+          clearInterval(game);
+          game = setInterval(draw, currentSpeed);
+        } else {
+          snake.pop();
+        }
+
+        let newHead = {
+          x: snakeX,
+          y: snakeY,
+        };
+
+        let deathReason = "";
+
+        if (
+          snakeX < 0 ||
+          snakeX >= canvas.width ||
+          snakeY < 0 ||
+          snakeY >= canvas.height
+        ) {
+          deathReason = "你撞到墙了！";
+        } else if (collision(newHead, snake)) {
+          deathReason = "你撞到了自己！";
+        } else if (obstacleSnake && collisionWithObstacle(newHead)) {
+          deathReason = "你撞到了新的小蛇！";
+        }
+
+        if (deathReason) {
+          if (!gameOver) {
+            gameOver = true;
+            setTimeout(() => {
+              clearInterval(game);
+              clearInterval(timerInterval);
+              const endTime = new Date();
+              const duration = (endTime - startTime) / 1000; // 持续时间，单位秒
+              history.push({
+                length: snake.length,
+                duration: duration,
+                deathReason: deathReason,
+              });
+              updateHistory();
+              if (
+                confirm(
+                  "游戏结束，" +
+                    deathReason +
+                    " 蛇的长度是：" +
+                    snake.length +
+                    "，持续时间：" +
+                    duration +
+                    "秒。是否再来一局？"
+                )
+              ) {
+                resetGame();
+              } else {
+                startGame();
+              }
+            }, 500);
+          }
+          return;
+        }
+
+        snake.unshift(newHead);
+
+        if (obstacleSnake && d !== lastDirection) {
+          moveObstacleSnake(d);
+          lastDirection = d;
+        }
+
+        // 检查是否按住空格键来决定是否加速
+        if (isAccelerating) {
+          currentSpeed = 50; // 加速到50
+        } else {
+          currentSpeed = originalSpeed; // 恢复原速
+        }
+        clearInterval(game);
+        game = setInterval(draw, currentSpeed);
+      }
+
+      function collision(head, array) {
+        for (let i = 0; i < array.length; i++) {
+          if (head.x == array[i].x && head.y == array[i].y) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function collisionWithObstacle(head) {
+        if (obstacleSnake) {
+          for (let i = 0; i < obstacleSnake.length; i++) {
+            if (head.x == obstacleSnake[i].x && head.y == obstacleSnake[i].y) {
+              // 将障碍蛇的身体变成食物
+              obstacleSnake.forEach((part) => {
+                food = { x: part.x, y: part.y };
+                ctx.fillStyle = "rgba(255,132,172)";
+                ctx.fillRect(food.x, food.y, box, box);
+              });
+              obstacleSnake = null; // 清除障碍蛇
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function addObstacleSnake() {
+        let direction = ["LEFT", "UP", "RIGHT", "DOWN"][
+          Math.floor(Math.random() * 4)
+        ];
+        let startX = Math.floor(Math.random() * 15 + 1) * box;
+        let startY = Math.floor(Math.random() * 15 + 1) * box;
+        obstacleSnake = [{ x: startX, y: startY, direction: direction }];
+        food = {
+          x: Math.floor(Math.random() * 15 + 1) * box,
+          y: Math.floor(Math.random() * 15 + 1) * box,
+        };
+      }
+
+      function moveObstacleSnake(newDirection) {
+        if (obstacleSnake) {
+          let head = obstacleSnake[0];
+          obstacleSnake[0].direction = newDirection; // 更新障碍蛇的方向
+          for (let i = 0; i < 2; i++) {
+            let newHead = { x: head.x, y: head.y, direction: head.direction };
+            if (head.direction == "LEFT") newHead.x -= box;
+            if (head.direction == "UP") newHead.y -= box;
+            if (head.direction == "RIGHT") newHead.x += box;
+            if (head.direction == "DOWN") newHead.y += box;
+
+            if (newHead.x < 0) newHead.x = canvas.width - box;
+            if (newHead.y < 0) newHead.y = canvas.height - box;
+            if (newHead.x >= canvas.width) newHead.x = 0;
+            if (newHead.y >= canvas.height) newHead.y = 0;
+
+            obstacleSnake.unshift(newHead);
+          }
+        }
+      }
+
+      function updateHistory() {
+        const historyDiv = document.getElementById("history");
+        historyDiv.innerHTML = "<h3>历史战绩</h3>";
+        history.forEach((record, index) => {
+          historyDiv.innerHTML +=
+            "<p>第" +
+            (index + 1) +
+            "局：长度 " +
+            record.length +
+            "，持续时间 " +
+            record.duration +
+            "秒。</p> <p id='text'>死因：" +
+            record.deathReason +
+            "</p>";
+        });
+      }
+
+      function updateTimer() {
+        const currentTime = new Date();
+        const elapsedTime = Math.floor((currentTime - startTime) / 1000);
+        const minutes = Math.floor(elapsedTime / 60);
+        const seconds = elapsedTime % 60;
+        document.getElementById("timer").innerText =
+          (minutes < 10 ? "0" : "") +
+          minutes +
+          ":" +
+          (seconds < 10 ? "0" : "") +
+          seconds;
+      }
+    </script>
+  </body>
+</html>
