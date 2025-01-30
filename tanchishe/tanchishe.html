@@ -10,7 +10,6 @@
       display: block;
       margin: 20px auto;
       border: 1px solid #000;
-      
     }
 
     .container {
@@ -25,8 +24,45 @@
       display: inline-block;
       margin: 0 auto;
       vertical-align: top;
-      height: 300px;
+      height: 420px;
       width: 200px;
+    }
+
+    #speedSelectContainer {
+      margin-bottom: 30px;
+    }
+
+    #speedSelect {
+      padding: 8px 12px;
+      /* 增加内边距 */
+      border: 1px solid #ccc;
+      /* 边框 */
+      border-radius: 4px;
+      /* 圆角 */
+      background-color: #fff;
+      /* 背景颜色 */
+      color: #333;
+      /* 字体颜色 */
+      font-size: 16px;
+      /* 字体大小 */
+      cursor: pointer;
+      /* 鼠标悬停时显示指针 */
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      /* 过渡效果 */
+      width: 100%;
+      /* 宽度 */
+      max-width: 150px;
+      /* 最大宽度 */
+      margin-top: 10px;
+      /* 上外边距 */
+    }
+
+    #speedSelect:hover,
+    #speedSelect:focus {
+      border-color: rgba(140,166,122);
+      /* 悬停和聚焦时的边框颜色 */
+      box-shadow: 0 0 8px rgba(140,166,122,0.25);
+      /* 悬停和聚焦时的阴影 */
     }
 
     .history {
@@ -49,7 +85,7 @@
     .wrapper {
       display: flex;
       justify-content: space-between;
-      
+
     }
 
     button {
@@ -59,9 +95,13 @@
       transition: all 0.3s ease-in-out;
     }
 
-    button:hover {
-      box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-      transform: translateY(-5px);
+
+    button:hover,
+    button:focus {
+      border-color: rgba(140,166,122);
+      /* 悬停和聚焦时的边框颜色 */
+      box-shadow: 0 0 8px rgba(140,166,122,0.25);
+      /* 悬停和聚焦时的阴影 */
     }
 
     #timer {
@@ -71,25 +111,32 @@
     }
 
     #text {
-      color: rgb(23, 225, 158);
+      color: rgb(154, 216, 110);
     }
   </style>
 </head>
 
 <body>
-
   <div id="timer">00:00</div>
   <div class="wrapper">
     <div class="container">
-      <h3>贪吃蛇2.0</h3>
+      <h3>贪吃蛇2.1</h3>
       <ul>
         <li>加速：空格</li>
         <li>控制：wasd/PgUp键</li>
       </ul>
+      <div id="speedSelectContainer">
+        <label for="speedSelect">速度:</label>
+        <select id="speedSelect">
+          <option value="250" selected>低速</option>
+          <option value="175">中速</option>
+          <option value="100">高速</option>
+        </select>
+      </div>
       <button id="startButton">开始游戏</button>
       <button id="restartButton">重新开始</button>
     </div>
-    <canvas id="gameCanvas" width="600" height="800"></canvas>
+    <canvas id="gameCanvas" width="600" height="760"></canvas>
     <div class="history" id="history"></div>
   </div>
   <script>
@@ -114,12 +161,23 @@
     document
       .getElementById("startButton")
       .addEventListener("click", resetGame);
+
     document
       .getElementById("restartButton")
       .addEventListener("click", restartGame);
 
     document.addEventListener("keydown", direction);
     document.addEventListener("keyup", direction);
+
+    // 添加速度设置的事件监听器
+    document.getElementById("speedSelect").addEventListener("change", function () {
+      originalSpeed = parseInt(this.value);
+      currentSpeed = originalSpeed;
+      if (game) {
+        clearInterval(game);
+        game = setInterval(draw, currentSpeed);
+      }
+    });
 
     function restartGame() {
       resetGame();
@@ -154,7 +212,7 @@
       //重新开始
       document.getElementById("restartButton").style.display = "inline";
     }
-    
+
     function startGame() {
       snake = [];
       snake[0] = { x: 10 * box, y: 10 * box };
@@ -449,12 +507,12 @@
           //调用 collision 函数检查生成的食物位置是否与蛇的身体有任何部分重叠。
           //如果生成的食物位置与蛇的身体重叠，则继续生成新的食物位置，直到找到一个不与蛇的身体重叠的位置为止。
           x: Math.floor(Math.random() * 30 + 1) * box,
-          y: Math.floor(Math.random() * 40 + 1) * box,
+          y: Math.floor(Math.random() * 38 + 1) * box,
         };
       } while (collision(newFood, snake));
       food = newFood;
     }
-  
+
   </script>
 </body>
 
